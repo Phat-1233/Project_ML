@@ -1,0 +1,11 @@
+# Tái lập mixup (ICLR 2018). Đã kiểm thử với Python 3.11.
+# Bản GPU của torch: cài theo lệnh trên https://pytorch.org/get-started/locally/
+# (Kaggle/Colab đã có sẵn torch + torchvision, chỉ cần cài thêm phần còn thiếu).
+torch>=2.3
+torchvision>=0.18
+numpy>=1.24
+pandas>=2.0
+scikit-learn>=1.3     # 3.6 UCI, KNN cho ablation 3.8
+matplotlib>=3.7       # vẽ biểu đồ kết quả
+pytest>=7.0           # chạy tests/
+wandb>=0.16           # tùy chọn: theo dõi thực nghiệm (--wandb)
