@@ -7,6 +7,7 @@ máy cá nhân là như nhau.
 | Notebook              | Mục đích                                                                                   | Thời gian GPU (ước lượng) |
 | --------------------- | --------------------------------------------------------------------------------------------- | ------------------------------ |
 | `exp32_smoke.ipynb` | Chạy thử 3.2: đo giây/epoch (FP32 và AMP), test resume, ước lượng giờ cho 200 epoch | 10–20 phút                   |
+| `exp38_ablation.ipynb` | 3.8 ablation: chạy thử rồi chạy các biến thể của Bảng 5, gom bảng + biểu đồ so với bài báo | ~ số lần chạy × thời gian 1 lần |
 
 ## Lần đầu: đưa code lên Kaggle
 
