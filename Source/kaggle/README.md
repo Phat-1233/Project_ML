@@ -7,6 +7,7 @@ máy cá nhân là như nhau.
 | Notebook              | Mục đích                                                                                   | Thời gian GPU (ước lượng) |
 | --------------------- | --------------------------------------------------------------------------------------------- | ------------------------------ |
 | `exp32_smoke.ipynb` | Chạy thử 3.2: đo giây/epoch (FP32 và AMP), test resume, ước lượng giờ cho 200 epoch | 10–20 phút                   |
+| `exp34_noisy.ipynb` | 3.4 nhãn nhiễu: 4 cấu hình tốt nhất của Bảng 2 cho một mức nhiễu (`NOISE`) mỗi phiên, tự resume, gom bảng + biểu đồ so với bài báo | ~6–8 giờ mỗi mức nhiễu (4 × 200 epoch) |
 
 ## Lần đầu: đưa code lên Kaggle
 
