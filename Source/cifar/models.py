@@ -89,23 +89,6 @@ MODELS = {"preact_resnet18": preact_resnet18}
 LATENT_LAYERS = {1: "layer1", 2: "layer2", 3: "layer3", 4: "layer4", 5: "linear"}
 
 
-# Additional CIFAR architectures for mixup section 3.2.
-#
-# PreAct ResNet-18 is reused from the existing factory above. The other models are reconstructed as
-# ``nn.Module`` implementations from the architecture specifications and these
-# reference implementations (no third-party files are vendored):
-#
-# * WideResNet: Sergey Zagoruyko (2016), BSD-2-Clause,
-#   https://github.com/szagoruyko/wide-residual-networks/blob/master/pytorch/resnet.py
-#   and ``pytorch/utils.py`` in that repository. In particular, its BN scales are
-#   initialized uniformly in [0, 1], and its equal-width shortcuts use the raw input.
-# * DenseNet: Andreas Veit's ``densenet-pytorch/densenet.py`` and the supplied
-#   ``facebookresearch/mixup-cifar10/models/densenet3.py`` (Facebook, Inc., 2017;
-#   CC-BY-NC-4.0, https://github.com/facebookresearch/mixup-cifar10/blob/main/LICENSE).
-#   This reconstruction retains bottlenecks, compression, and fan-out conv init,
-#   and removes optional dropout/basic blocks unused in section 3.2.
-#
-# Paper: https://arxiv.org/abs/1710.09412v2, section 3.2 / Figure 3.
 
 import math
 
