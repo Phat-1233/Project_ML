@@ -27,16 +27,16 @@ Source/
     config.py        cờ dòng lệnh chung cho mọi script
     utils.py         seed, thiết bị, log CSV/JSON/W&B, checkpoint, thông tin môi trường
   cifar/             dùng chung cho 3.2, 3.4, 3.5, 3.8
-    models.py        PreAct ResNet-18 giống hệt mã gốc
+    models.py        PreAct ResNet-18, WideResNet-28-10, DenseNet-BC-190
     data.py          CIFAR-10/100, augmentation, nhãn nhiễu
   tests/test_core.py
 ```
 
-Các thực nghiệm (thêm sau, mỗi người một file) chỉ gọi lại `core` và `cifar`:
+Các thực nghiệm chỉ gọi lại `core` và `cifar`:
 
 | Mục | Dữ liệu | Dùng từ lõi |
 |---|---|---|
-| 3.2 CIFAR | ảnh | `Trainer`, `cifar.build_cifar`, `preact_resnet18` |
+| 3.2 CIFAR | ảnh | `Trainer`, `cifar.build_cifar`, `preact_resnet18`; [hướng dẫn chạy 3 model × 2 dataset × ERM/mixup](experiments/README_exp32.md) |
 | 3.3 Speech | phổ âm thanh (B,1,F,T) | `Trainer` với `MixupConfig(warmup_epochs=5)`, `step_schedule([10,20])` |
 | 3.4 Nhãn nhiễu | ảnh | `build_cifar(noise_rate=..., eval_train_subsets=True)`, `preact_resnet18(dropout=...)` |
 | 3.5 Đối kháng | ảnh | `core.attacks` + `Normalized` trên model đã train |
