@@ -31,8 +31,9 @@ PAPER = {
     (0.8, 32.0, 0.0): (25.3, 30.9, 18.92, 85.44),
     (0.8, 8.0, 0.3): (24.0, 24.8, 19.70, 87.67),
 }
-METRICS = ("best_err", "last_err", "train_real_err", "train_corrupted_err")
-COLS = ("Test best", "Test last", "Train real", "Train corrupted")
+# "Train real" của bài báo = lỗi trên các mẫu KHÔNG bị làm nhiễu (train_clean_err).
+METRICS = ("best_err", "last_err", "train_clean_err", "train_corrupted_err", "train_real_err")
+COLS = ("Test best", "Test last", "Train real", "Train corrupted", "Train toàn bộ nhãn thật")
 
 
 def label(alpha: float, p: float) -> str:
@@ -42,11 +43,11 @@ def label(alpha: float, p: float) -> str:
 
 
 def collect(root: Path) -> dict:
-    """{(rate, α, p): [summary, ...]} chỉ lấy lần chạy đã xong (có train_real_err)."""
+    """{(rate, α, p): [summary, ...]} chỉ lấy lần chạy đã xong (có train_clean_err)."""
     runs: dict[tuple, list[dict]] = {}
     for s in sorted(root.glob("exp34_noise*/*/summary.json")):
         summ = json.loads(s.read_text())
-        if "train_real_err" not in summ:
+        if "train_clean_err" not in summ:
             continue
         cfg = json.loads((s.parent / "config.json").read_text())["config"]
         key = (float(cfg["noise_rate"]), float(cfg["alpha"]), float(cfg["dropout"]))
@@ -64,7 +65,7 @@ def build_rows(runs: dict) -> list[dict]:
     rows = []
     for key in sorted(runs, key=lambda k: (k[0], k[1] > 0, k[2] > 0, k[1], k[2])):
         rate, alpha, p = key
-        paper = PAPER.get(key, (None,) * 4)
+        paper = PAPER.get(key, (None,) * 4) + (None,)
         row = {"noise": f"{rate:.0%}", "method": label(alpha, p), "n_seeds": len(runs[key])}
         for col, m, pv in zip(COLS, METRICS, paper):
             row[col] = _fmt([r[m] for r in runs[key]], pv)

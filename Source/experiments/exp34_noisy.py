@@ -12,8 +12,10 @@ Ví dụ (chạy từ thư mục Source):
     python experiments/exp34_noisy.py --noise-rate 0.5 --alpha 8 --dropout 0.3 --epochs 1 --limit-batches 20
 
 Kết quả: results/exp34_noise50/<method>_seed<s>/summary.json, ngoài best/last test error
-còn có lỗi train ở epoch cuối trên nhãn thật (`train_real_err`) và trên phần bị làm nhiễu
-với nhãn nhiễu (`train_corrupted_err`), như hai cột "Training error" của Bảng 2.
+còn có lỗi train ở epoch cuối trên phần KHÔNG bị làm nhiễu (`train_clean_err`, cột "Real")
+và trên phần bị làm nhiễu với nhãn nhiễu (`train_corrupted_err`, cột "Corrupted") của Bảng 2,
+cùng lỗi trên toàn bộ tập train với nhãn thật (`train_real_err`, để tham khảo).
+Chạy lại lệnh của một lần chạy đã xong: chỉ nạp last.pt và đo lại các chỉ số trên (vài phút).
 
 Lựa chọn cài đặt (cần ghi trong báo cáo):
   * Nhãn nhiễu rút đều trên cả 10 lớp nên có thể trùng nhãn cũ: tỉ lệ nhãn sai thật
@@ -32,11 +34,13 @@ from pathlib import Path
 
 import numpy as np
 import torch
+from torch.utils.data import DataLoader
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from cifar import build_cifar, preact_resnet18  # noqa: E402
 from core.config import add_common_args, mixup_config_from_args  # noqa: E402
+from core.data_utils import RelabeledDataset  # noqa: E402
 from core.schedules import step_schedule  # noqa: E402
 from core.trainer import Trainer  # noqa: E402
 from core.utils import RunLogger, count_params, get_device, set_seed  # noqa: E402
@@ -83,10 +87,16 @@ def main(argv=None):
                  limit_batches=a.limit_batches)
     summary = tr.fit(resume=not a.no_resume)
 
-    for split, loader in data.extra_eval.items():          # train_real, train_corrupted
+    real_ds = data.extra_eval["train_real"].dataset
+    clean = real_ds.labels
+    # Cột "Real" của Bảng 2 = lỗi trên các mẫu KHÔNG bị làm nhiễu (ERM học thuộc hết vẫn ~0%),
+    # còn train_real = toàn bộ 50k ảnh với nhãn thật (giữ lại để tham khảo).
+    clean_set = RelabeledDataset(real_ds.base, clean, subset=np.where(~data.noisy_mask)[0])
+    loaders = {**data.extra_eval,                          # train_real, train_corrupted
+               "train_clean": DataLoader(clean_set, batch_size=100, shuffle=False, num_workers=a.workers)}
+    for split, loader in loaders.items():
         for k, v in tr.evaluate(loader).items():
             summary[f"{split}_{k}"] = v
-    clean = data.extra_eval["train_real"].dataset.labels
     noisy = np.asarray(data.train.dataset.targets)
     summary["noise_frac_selected"] = float(data.noisy_mask.mean())
     summary["noise_frac_wrong"] = float((clean != noisy).mean())

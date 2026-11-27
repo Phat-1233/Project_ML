@@ -22,7 +22,7 @@ def _fake_run(root: Path, name: str, rate, alpha, p, seed, err, done=True):
         {"config": {"noise_rate": rate, "alpha": alpha, "dropout": p, "seed": seed}}))
     summ = {"best_err": err, "last_err": err + 1}
     if done:
-        summ.update(train_real_err=1.0, train_corrupted_err=85.0)
+        summ.update(train_clean_err=1.0, train_corrupted_err=85.0, train_real_err=40.0)
     (d / "summary.json").write_text(json.dumps(summ))
 
 
@@ -39,6 +39,7 @@ def test_report_groups_seeds_and_skips_unfinished():
         assert erm["n_seeds"] == 1 and erm["Test best"] == "20.00 (18.8)"
         assert mix["n_seeds"] == 2 and mix["Test best"] == "12.00 ± 1.41 (11.3)"
         assert mix["Test last"] == "13.00 ± 1.41 (12.7)"
+        assert mix["Train real"] == "1.00 ± 0.00 (5.84)" and mix["Train toàn bộ nhãn thật"] == "40.00 ± 0.00"
         assert (root / "exp34_report.md").exists() and (root / "exp34_report.csv").exists()
 
 
