@@ -1,0 +1,20 @@
+{
+  "best_err": 9.150000000000002,
+  "last_err": 10.199999999999998,
+  "median_last10_err": 10.395,
+  "epochs_run": 200,
+  "mean_epoch_time_s": 22.35333679676056,
+  "last_test_err": 10.199999999999998,
+  "last_test_err_top5": 1.2599999999999945,
+  "train_real_loss": 0.36325558738708497,
+  "train_real_err": 4.644000000000004,
+  "train_real_err_top5": 0.41999999999999815,
+  "train_corrupted_loss": 2.469294176812131,
+  "train_corrupted_err": 80.98661873377272,
+  "train_corrupted_err_top5": 16.16736568803675,
+  "train_clean_loss": 0.2749504303911917,
+  "train_clean_err": 1.7581153403691263,
+  "train_clean_err_top5": 0.0400140049017117,
+  "noise_frac_selected": 0.20028,
+  "noise_frac_wrong": 0.17966
+}
