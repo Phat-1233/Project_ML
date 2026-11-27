@@ -1,0 +1,54 @@
+{
+  "config": {
+    "seed": 0,
+    "epochs": 200,
+    "batch_size": 128,
+    "lr": 0.1,
+    "momentum": 0.9,
+    "wd": 0.0001,
+    "milestones": [
+      100,
+      150
+    ],
+    "gamma": 0.1,
+    "official_lr_offset": false,
+    "workers": 4,
+    "data_dir": "/kaggle/working/data",
+    "out_dir": "/kaggle/working/results",
+    "run_name": null,
+    "device": "auto",
+    "amp": false,
+    "deterministic": false,
+    "no_resume": false,
+    "wandb": false,
+    "wandb_project": "mixup-repro",
+    "limit_batches": 0,
+    "alpha": 1.0,
+    "pairing": "random",
+    "label_mode": "hard",
+    "smoothing": 0.2,
+    "per_sample_lambda": false,
+    "mix_warmup": 0,
+    "input_noise": 0.0,
+    "latent_module": null,
+    "variant": "input_ls_0.2",
+    "knn": null,
+    "knn_k": 200,
+    "knn_cache": null,
+    "list": false
+  },
+  "env": {
+    "python": "3.13.16",
+    "platform": "Linux-6.18.55+-x86_64-with-glibc2.39",
+    "torch": "2.11.0+cu130",
+    "numpy": "2.1.3",
+    "cuda_available": true,
+    "torchvision": "0.26.0+cu130",
+    "cuda": "13.0",
+    "cudnn": 92700,
+    "gpu": [
+      "Tesla T4",
+      "Tesla T4"
+    ]
+  }
+}

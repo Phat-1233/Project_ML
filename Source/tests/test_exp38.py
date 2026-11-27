@@ -105,3 +105,34 @@ def test_end_to_end_variants_and_report(monkeypatch):
         assert {r["variant"] for r in rows} >= {"erm", "mixup", "input_sc_knn"}
         assert all(r["n_seeds"] == 2 for r in rows)
         assert (Path(tmp) / "exp38_ablation" / "report.md").exists()
+
+
+def _fake_run(root: Path, name: str, cfg: dict, err: float, epochs_run=None):
+    import json
+    d = root / name
+    d.mkdir(parents=True)
+    (d / "config.json").write_text(json.dumps({"config": cfg}))
+    (d / "summary.json").write_text(json.dumps({"median_last10_err": err,
+                                                "epochs_run": epochs_run or cfg["epochs"]}))
+
+
+def test_report_imports_exp32_with_same_protocol(tmp_path):
+    base = dict(epochs=200, milestones=[100, 150], amp=False, lr=0.1, batch_size=128, momentum=0.9,
+                gamma=0.1, official_lr_offset=False, wd=1e-4, seed=0)
+    r38 = tmp_path / "res" / "exp38_ablation"
+    _fake_run(r38, "input_ac_rp_wd0.0001_seed0", {**base, "variant": "input_ac_rp", "alpha": 1.0}, 5.2)
+    nhi = tmp_path / "nhi" / "exp32_cifar10" / "preact_resnet18"
+    exp32 = {**base, "dataset": "cifar10", "model": "preact_resnet18", "no_augment": False, "smoothing": 0.0,
+             "input_noise": 0.0, "latent_module": None, "pairing": "random", "label_mode": "mix"}
+    _fake_run(nhi, "erm_seed0", {**exp32, "alpha": 0.0}, 5.5)
+    _fake_run(nhi, "mixup_a1_seed0", {**exp32, "alpha": 1.0}, 4.3)
+    _fake_run(nhi, "mixup_a1_seed1", {**exp32, "alpha": 1.0, "seed": 1}, 4.1, epochs_run=120)   # chưa xong
+    _fake_run(nhi, "erm_seed1_custom_x", {**exp32, "alpha": 0.0, "seed": 1, "amp": True}, 5.0)  # khác AMP
+    _fake_run(tmp_path / "nhi" / "exp32_cifar100" / "preact_resnet18", "erm_seed0",
+              {**exp32, "dataset": "cifar100", "alpha": 0.0}, 25.0)                            # khác dataset
+    rows = {(r["variant"], r["wd"]): r for r in R.main(["--results", str(tmp_path / "res"),
+                                                        "--import-exp32", str(tmp_path / "nhi")])}
+    assert rows[("erm", "0.0001")]["source"] == "3.2" and rows[("erm", "0.0001")]["n_seeds"] == 1
+    assert rows[("erm", "0.0001")]["ours_mean"] == 5.5
+    assert rows[("mixup", "0.0001")]["n_seeds"] == 1
+    assert rows[("input_ac_rp", "0.0001")]["source"] == "3.8"

@@ -1,0 +1,3 @@
+chế độ,giây/epoch,giờ/1 lần chạy,giờ cho 4 lần chạy,gpu
+fp32,38.7,2.15,8.6,Tesla T4
+amp,20.4,1.13,4.5,Tesla T4

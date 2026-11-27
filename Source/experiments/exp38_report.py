@@ -6,6 +6,12 @@
     python experiments/exp38_report.py --results ./results
     -> results/exp38_ablation/report.csv, report.md, report.png
 
+    # dùng lại ERM / mixup của 3.2 (PreAct ResNet-18, CIFAR-10) cho 2 dòng đầu Bảng 5
+    python experiments/exp38_report.py --results ./results --import-exp32 ./results_nhi
+
+Run 3.2 chỉ được nhận khi cùng giao thức với các run 3.8 (epochs, milestones, AMP, lr,
+batch, momentum, augment); run lệch giao thức bị bỏ qua và in lý do.
+
 Cột "sai khác" = (nhóm - bài báo) / bài báo; "trong nhiễu" = |nhóm - bài báo| <= 2·std
 (chỉ có nghĩa khi chạy >= 2 seed).
 """
@@ -41,23 +47,70 @@ def group_of(v: str) -> str:
     return "?"
 
 
-def collect(root: Path) -> dict:
-    runs: dict[tuple[str, float], list[float]] = {}
+PROTOCOL_KEYS = ("epochs", "milestones", "amp", "lr", "batch_size", "momentum", "gamma", "no_augment",
+                 "official_lr_offset")
+
+
+PROTOCOL_DEFAULTS = {"no_augment": False, "official_lr_offset": False, "amp": False}  # 3.8 không có cờ no_augment
+
+
+def protocol(cfg: dict) -> tuple:
+    return tuple(json.dumps(cfg.get(k, PROTOCOL_DEFAULTS.get(k)), sort_keys=True) for k in PROTOCOL_KEYS)
+
+
+def collect(root: Path) -> tuple[dict, set]:
+    """{(biến thể, wd): [(err, nguồn), ...]} và tập giao thức của các run 3.8."""
+    runs: dict[tuple[str, float], list[tuple[float, str]]] = {}
+    protos = set()
     for s in sorted(root.glob("*/summary.json")):
         cfg = json.loads((s.parent / "config.json").read_text())["config"]
         v = cfg.get("variant") or s.parent.name
         err = json.loads(s.read_text())["median_last10_err"]
-        runs.setdefault((v, float(cfg["wd"])), []).append(err)
-    return runs
+        runs.setdefault((v, float(cfg["wd"])), []).append((err, "3.8"))
+        protos.add(protocol(cfg))
+    return runs, protos
+
+
+def exp32_variant(cfg: dict):
+    """Run 3.2 nào trùng một dòng Bảng 5: PreAct ResNet-18, CIFAR-10, ERM (α=0) hoặc mixup gốc (α=1)."""
+    if cfg.get("dataset") != "cifar10" or cfg.get("model", "preact_resnet18") != "preact_resnet18":
+        return None
+    if cfg.get("limit_batches") or cfg.get("smoothing", 0) or cfg.get("input_noise", 0) or cfg.get("latent_module"):
+        return None
+    if cfg.get("pairing", "random") != "random" or cfg.get("label_mode", "mix") != "mix":
+        return None
+    if cfg.get("per_sample_lambda") or cfg.get("mix_warmup", 0):
+        return None
+    return {0.0: "erm", 1.0: "mixup"}.get(float(cfg.get("alpha", -1)))
+
+
+def import_exp32(src: Path, runs: dict, protos: set) -> None:
+    for s in sorted(src.rglob("summary.json")):
+        cfg = json.loads((s.parent / "config.json").read_text())["config"]
+        v = exp32_variant(cfg)
+        if v is None:
+            continue
+        summ = json.loads(s.read_text())
+        if summ.get("epochs_run", cfg.get("epochs")) != cfg.get("epochs"):
+            print(f"[3.2] bỏ qua {s.parent}: chưa chạy đủ {cfg.get('epochs')} epoch")
+            continue
+        if protos and protocol(cfg) not in protos:
+            diff = {k: cfg.get(k, PROTOCOL_DEFAULTS.get(k)) for k in PROTOCOL_KEYS}
+            print(f"[3.2] bỏ qua {s.parent}: khác giao thức 3.8 {diff}")
+            continue
+        runs.setdefault((v, float(cfg["wd"])), []).append((summ["median_last10_err"], "3.2"))
+        print(f"[3.2] dùng {s.parent} -> {v}, wd={cfg['wd']}, seed={cfg.get('seed')}")
 
 
 def build_rows(runs: dict) -> list[dict]:
     rows = []
-    for (v, wd), errs in sorted(runs.items(), key=lambda kv: (group_of(kv[0][0]), kv[0][0], kv[0][1])):
+    for (v, wd), items in sorted(runs.items(), key=lambda kv: (group_of(kv[0][0]), kv[0][0], kv[0][1])):
+        errs = [e for e, _ in items]
+        source = "+".join(sorted({src for _, src in items}))
         mean = statistics.mean(errs)
         std = statistics.stdev(errs) if len(errs) > 1 else float("nan")
         paper = PAPER.get(v, (None, None))[0 if abs(wd - 1e-4) < 1e-12 else 1] if v in PAPER else None
-        row = {"group": group_of(v), "variant": v, "wd": f"{wd:g}", "n_seeds": len(errs),
+        row = {"group": group_of(v), "variant": v, "wd": f"{wd:g}", "n_seeds": len(errs), "source": source,
                "ours_mean": round(mean, 2), "ours_std": round(std, 2) if len(errs) > 1 else "",
                "paper": paper if paper is not None else ""}
         if paper is not None:
@@ -69,16 +122,17 @@ def build_rows(runs: dict) -> list[dict]:
 
 def write_outputs(rows: list[dict], out: Path):
     import csv
-    cols = ["group", "variant", "wd", "n_seeds", "ours_mean", "ours_std", "paper", "rel_diff_%", "within_2std"]
+    cols = ["group", "variant", "wd", "n_seeds", "source", "ours_mean", "ours_std", "paper", "rel_diff_%", "within_2std"]
     with open(out / "report.csv", "w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=cols)
         w.writeheader()
         w.writerows(rows)
-    md = ["| Nhóm | Biến thể | WD | Seed | Nhóm (mean ± std) | Bài báo | Sai khác |", "|---|---|---|---|---|---|---|"]
+    md = ["| Nhóm | Biến thể | WD | Seed | Nguồn | Nhóm (mean ± std) | Bài báo | Sai khác |",
+          "|---|---|---|---|---|---|---|---|"]
     for r in rows:
         ours = f"{r['ours_mean']:.2f}" + (f" ± {r['ours_std']:.2f}" if r["ours_std"] != "" else "")
         diff = f"{r['rel_diff_%']:+.1f}%" if "rel_diff_%" in r else ""
-        md.append(f"| {r['group']} | {r['variant']} | {r['wd']} | {r['n_seeds']} | {ours} | {r['paper']} | {diff} |")
+        md.append(f"| {r['group']} | {r['variant']} | {r['wd']} | {r['n_seeds']} | {r['source']} | {ours} | {r['paper']} | {diff} |")
     (out / "report.md").write_text("\n".join(md) + "\n")
     print("\n".join(md))
 
@@ -112,9 +166,17 @@ def write_outputs(rows: list[dict], out: Path):
 def main(argv=None):
     p = argparse.ArgumentParser()
     p.add_argument("--results", default="./results")
+    p.add_argument("--import-exp32", nargs="*", default=[],
+                   help="thư mục kết quả 3.2 (vd của Nhi); lấy ERM/mixup PreAct ResNet-18 CIFAR-10 cùng giao thức")
     a = p.parse_args(argv)
     root = Path(a.results) / "exp38_ablation"
-    rows = build_rows(collect(root))
+    runs, protos = collect(root)
+    if len(protos) > 1:
+        print(f"[cảnh báo] các run 3.8 trong {root} dùng {len(protos)} giao thức khác nhau "
+              f"(vd 100 và 200 epoch); không nên gộp chung một bảng")
+    for d in a.import_exp32:
+        import_exp32(Path(d), runs, protos)
+    rows = build_rows(runs)
     if not rows:
         raise SystemExit(f"không thấy summary.json nào trong {root}")
     write_outputs(rows, root)

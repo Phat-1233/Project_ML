@@ -1,0 +1,9 @@
+{
+  "best_err": 5.249999999999999,
+  "last_err": 5.289999999999995,
+  "median_last10_err": 5.310000000000004,
+  "epochs_run": 200,
+  "mean_epoch_time_s": 41.8955525624752,
+  "last_test_err": 5.289999999999995,
+  "last_test_err_top5": 0.46000000000000485
+}
